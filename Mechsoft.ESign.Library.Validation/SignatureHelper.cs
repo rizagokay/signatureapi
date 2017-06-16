@@ -13,7 +13,7 @@ using tr.gov.tubitak.uekae.esya.api.common.util;
 
 namespace Mechsoft.ESign.Library.Validation
 {
-    public class SignatureHelper : ISignatureHelper
+    public class SignatureHelper : ISignatureHelper, IDisposable
     {
         private SignatureConfig _config;
 
@@ -37,7 +37,12 @@ namespace Mechsoft.ESign.Library.Validation
 
         private void SetPolicy()
         {
-            this._policy = PolicyReader.readValidationPolicy(new FileStream(_config.PolicyXmlPath, FileMode.Open));
+            using (var File = new FileStream(_config.PolicyXmlPath, FileMode.Open))
+            {
+                this._policy = PolicyReader.readValidationPolicy(File);
+            }
+          
+            
             Dictionary<string, object> parameters = new Dictionary<string, object>();
             parameters["storepath"] = _config.SertifikaDeposuPath;
             _policy.bulmaPolitikasiAl().addTrustedCertificateFinder("tr.gov.tubitak.uekae.esya.api.certificate.validation.find.certificate.trusted.TrustedCertificateFinderFromXml",
@@ -137,6 +142,10 @@ namespace Mechsoft.ESign.Library.Validation
                 .Result;
         }
 
+        public void Dispose()
+        {
+           
+        }
     }
 
     public class SignatureConfig
