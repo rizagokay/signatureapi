@@ -1,5 +1,6 @@
 ﻿using Mechsoft.ESign.Library.Validation;
 using Mechsoft.ESign.Library.Validation.Exceptions;
+using Sharpbrake.Client;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +30,13 @@ namespace Mechsoft.ESign.WebAPI.Controllers
         [Route("GetSignatures")]
         public async Task<IHttpActionResult> GetSignatures(byte[] data)
         {
+
+            var airbrake = new AirbrakeNotifier(new AirbrakeConfig
+            {
+                ProjectId = "146734",
+                ProjectKey = "6b2293ec486cbbea517b945202e7c7fc"
+            });
+
             try
             {
                 List<SignatureInfo> infos = await signHelper.CheckSignaturesAsync(data);
@@ -36,6 +44,7 @@ namespace Mechsoft.ESign.WebAPI.Controllers
             }
             catch (SignatureNotFoundException ex)
             {
+                await airbrake.NotifyAsync(ex);
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
             }
         }
