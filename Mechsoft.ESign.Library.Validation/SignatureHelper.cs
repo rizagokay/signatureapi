@@ -10,6 +10,7 @@ using tr.gov.tubitak.uekae.esya.api.cmssignature.attribute;
 using tr.gov.tubitak.uekae.esya.api.cmssignature.signature;
 using tr.gov.tubitak.uekae.esya.api.cmssignature.validation;
 using tr.gov.tubitak.uekae.esya.api.common.util;
+using tr.gov.tubitak.uekae.esya.api.crypto.alg;
 
 namespace Mechsoft.ESign.Library.Validation
 {
@@ -41,8 +42,8 @@ namespace Mechsoft.ESign.Library.Validation
             {
                 this._policy = PolicyReader.readValidationPolicy(File);
             }
-          
-            
+
+
             Dictionary<string, object> parameters = new Dictionary<string, object>();
             parameters["storepath"] = _config.SertifikaDeposuPath;
             _policy.bulmaPolitikasiAl().addTrustedCertificateFinder("tr.gov.tubitak.uekae.esya.api.certificate.validation.find.certificate.trusted.TrustedCertificateFinderFromXml",
@@ -76,63 +77,66 @@ namespace Mechsoft.ESign.Library.Validation
                     throw new SignatureNotFoundException("İmza bilgisi bulunamdı.");
                 }
 
-                try
+                Dictionary<string, object> params_ = new Dictionary<string, object>();
+                params_[EParameters.P_CERT_VALIDATION_POLICY] = _policy;
+                params_[EParameters.P_FORCE_STRICT_REFERENCE_USE] = true;
+
+                SignedDataValidation sdv = new SignedDataValidation();
+                SignedDataValidationResult sdvr = sdv.verify(input, params_);
+
+                List<SignatureInfo> signInfo = new List<SignatureInfo>();
+
+                foreach (var item in sdvr.getSDValidationResults())
                 {
-                    bool allvalid = false;
+                    var certificate = item.getSignerCertificate();
+                    var name = certificate.getSubject().getCommonNameAttribute();
+                    var identity = certificate.getSubject().getSerialNumberAttribute();
+                    var serialnumber = certificate.getSerialNumber().ToString();
+                    var issuer = certificate.getIssuer().getCommonNameAttribute();
 
-                    Dictionary<string, object> params_ = new Dictionary<string, object>();
-                    params_[EParameters.P_CERT_VALIDATION_POLICY] = _policy;
+                    bool isvalid = false;
 
-                    //if (externalContent != null)
-                    //    params_[EParameters.P_EXTERNAL_CONTENT] = externalContent;
-
-                    params_[EParameters.P_FORCE_STRICT_REFERENCE_USE] = true;
-
-                    SignedDataValidation sdv = new SignedDataValidation();
-                    SignedDataValidationResult sdvr = sdv.verify(input, params_);
-
-                    if (sdvr.getSDStatus() == SignedData_Status.ALL_VALID)
+                    if (item.getSignatureStatus() == Types.Signature_Status.VALID)
                     {
-
-                        allvalid = true;
-                    }
-                    else
-                    {
-                        allvalid = false;
+                        isvalid = true;
                     }
 
-                    List<SignatureInfo> signInfo = new List<SignatureInfo>();
+                    var info = new SignatureInfo() { Identity = identity, Name = name, IsValid = isvalid, Issuer = issuer, SerialNumber = serialnumber };
 
-                    foreach (var item in sdvr.getSDValidationResults())
+                    if (certificate.getNotAfter().HasValue)
                     {
-                        var certificate = item.getSignerCertificate();
-                        var name = certificate.getSubject().getCommonNameAttribute();
-                        var identity = certificate.getSubject().getSerialNumberAttribute();
-
-                        bool isvalid = false;
-
-                        if (item.getSignatureStatus() == Types.Signature_Status.VALID)
-                        {
-                            isvalid = true;
-                        }
-
-                        signInfo.Add(new SignatureInfo() { Identity = identity, Name = name, IsValid = isvalid });
+                        info.ValidUntil = certificate.getNotAfter().Value;
                     }
 
-                    return signInfo;
+                    if (certificate.getNotBefore().HasValue)
+                    {
+                        info.ValidFrom = certificate.getNotBefore().Value;
+                    }
 
-                    //  return allvalid;
+                    var signaturealgorithm = SignatureAlg.fromAlgorithmIdentifier(certificate.getSignatureAlgorithm()).first().getName();
+                    var publickeyalgorithm = SignatureAlg.fromAlgorithmIdentifier(certificate.getPublicKeyAlgorithm()).first().getName();
 
+                    var publicKey = certificate.asX509Certificate2().GetPublicKeyString();
+
+                    info.PublicKey = publicKey;
+                    info.SignatureAlgorithm = signaturealgorithm;
+                    info.PublicKeyAlgorithm = publickeyalgorithm;
+
+                    info.IsTimeStampedCertificate = certificate.isTimeStampingCertificate();
+                    info.IsQualifiedCertificate = certificate.isQualifiedCertificate();
+
+                    if (item.getSigningTime().HasValue)
+                    {
+                        info.SignedOn = item.getSigningTime().Value;
+                    }
+
+                    signInfo.Add(info);
                 }
-                catch (FileNotFoundException e)
-                {
-                    throw new SystemException("Policy file could not be found.", e);
-                }
+
+                return signInfo;
 
 
             });
-
-
         }
 
         public List<SignatureInfo> CheckSignature(byte[] input)
@@ -144,7 +148,7 @@ namespace Mechsoft.ESign.Library.Validation
 
         public void Dispose()
         {
-           
+
         }
     }
 

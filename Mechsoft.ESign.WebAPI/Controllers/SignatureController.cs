@@ -42,10 +42,18 @@ namespace Mechsoft.ESign.WebAPI.Controllers
                 List<SignatureInfo> infos = await signHelper.CheckSignaturesAsync(data);
                 return Ok(infos);
             }
-            catch (SignatureNotFoundException ex)
+            catch (SignatureNotFoundException Ex)
             {
-                await airbrake.NotifyAsync(ex);
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
+                return ResponseMessage(Request.CreateErrorResponse(HttpStatusCode.NotFound, Ex.Message));
+            }
+            catch (FileNotFoundException Ex)
+            {
+                return ResponseMessage(Request.CreateErrorResponse(HttpStatusCode.NotFound, Ex.Message));
+            }
+            catch (Exception Ex)
+            {
+                await airbrake.NotifyAsync(Ex);
+                return ResponseMessage(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, Ex.Message));
             }
         }
 
