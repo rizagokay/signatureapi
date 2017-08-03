@@ -30,10 +30,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Asn1Net.Reader, Version=1.1.0.1, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Asn1Net.Reader.1.1.0.1\lib\net40\Asn1Net.Reader.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="asn1rt, Version=6.0.4980.15931, Culture=neutral, PublicKeyToken=e419c4ffbcc12130, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>lib\asn1rt.dll</HintPath>
@@ -134,9 +130,6 @@
   <ItemGroup>
     <Folder Include="lib\en-US\" />
     <Folder Include="lib\tr-TR\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
