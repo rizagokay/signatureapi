@@ -77,6 +77,7 @@ namespace Mechsoft.ESign.Library.Validation
                     throw new SignatureNotFoundException("İmza bilgisi bulunamdı.");
                 }
 
+                BaseSignedData bs = new BaseSignedData(input);
                 Dictionary<string, object> params_ = new Dictionary<string, object>();
                 params_[EParameters.P_CERT_VALIDATION_POLICY] = _policy;
                 params_[EParameters.P_FORCE_STRICT_REFERENCE_USE] = true;
@@ -86,13 +87,18 @@ namespace Mechsoft.ESign.Library.Validation
 
                 List<SignatureInfo> signInfo = new List<SignatureInfo>();
 
-                foreach (var item in sdvr.getSDValidationResults())
+                for (int i = 0; i < sdvr.getSDValidationResults().Count; i++)
                 {
+
+                    var item = sdvr.getSDValidationResults()[i];
+                    var signatureType = bs.getSignerList()[i].getType().name();
                     var certificate = item.getSignerCertificate();
                     var name = certificate.getSubject().getCommonNameAttribute();
                     var identity = certificate.getSubject().getSerialNumberAttribute();
                     var serialnumber = certificate.getSerialNumber().ToString();
                     var issuer = certificate.getIssuer().getCommonNameAttribute();
+
+
 
                     bool isvalid = false;
 
@@ -101,7 +107,7 @@ namespace Mechsoft.ESign.Library.Validation
                         isvalid = true;
                     }
 
-                    var info = new SignatureInfo() { Identity = identity, Name = name, IsValid = isvalid, Issuer = issuer, SerialNumber = serialnumber };
+                    var info = new SignatureInfo() { Identity = identity, Name = name, IsValid = isvalid, Issuer = issuer, SerialNumber = serialnumber, SignatureType = signatureType };
 
                     if (certificate.getNotAfter().HasValue)
                     {
